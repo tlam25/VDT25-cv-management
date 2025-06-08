@@ -1,0 +1,165 @@
+.login-body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+	background-image: url('../../assets/background.png');
+	background-size: cover; 
+    background-position: center;
+    background-repeat: no-repeat; 
+}
+
+.login-container {
+    display: flex;
+    flex-direction: column;
+    margin: auto;
+    background: #ffffff;
+    padding-bottom: 30px;
+    width: 700px;
+    border-radius: 20px;
+    box-shadow: 0 0 10px rgba(255, 255, 255, 0.7);
+    border: 2px solid #e71039;
+}
+
+.login-header {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    width: 100%;
+    margin-top: 30px
+}
+
+.welcome-text {
+    color: #000000;
+    font-size: 20px;
+    font-weight: 400;
+	font-style: italic;
+}
+
+.text {
+    color: #e71039;
+    font-size: 30px;
+    font-weight: 700;
+}
+
+.underline {
+    width: 350px;
+    height: 3px;
+    background: #e71039;
+    border-radius: 10px;
+}
+
+.login-form {
+	display: flex;
+	flex-direction: column;
+	align-items: center;
+	width: 100%;
+	margin-top: 30px;
+}
+
+.form-group {
+	width: 100%;
+	margin-bottom: 20px;
+}
+
+.form-group label {
+	display: block;
+	color: #000000;
+	font-size: 17px;
+	font-weight: 500;
+	margin-bottom: 8px;
+}
+
+/* input voi icons */
+.icon-input {
+	display: flex;
+	align-items: center;
+	background: #f5f5f5;
+	border: 2px solid #ddd;
+	border-radius: 10px;
+	padding: 10px;
+	transition: border-color 0.3s ease;
+}
+
+.icon-input:hover,
+.icon-input:focus-within {
+	border-color: #e71039;
+}
+
+.icon-input svg {
+	color: #e71039;
+	font-size: 20px;
+	margin-right: 10px
+}
+
+.icon-input input {
+	border: none;
+	background: transparent;
+	width: 100%;
+	font-size: 20px;
+	outline: none;
+	color: #000000;
+}
+
+.icon-input input::placeholder {
+	color: #999;
+	font-size: 17px;
+}
+
+.login-form p {
+	text-align: center;
+	font-size: 13px;
+	color: #e71039;
+}
+
+.submit-container {
+	display: flex;
+	justify-content: center;
+}
+
+.login-button {
+	background: #e71039;
+	color: #ffffff;
+	font-size: 16px;
+	font-weight: 500;
+	padding: 12px 30px;
+	border: none;
+	border-radius: 20px;
+	cursor: pointer;
+	transition: background 0.3s ease, transform 0.2s ease;
+}
+
+.login-button:hover {
+	background: #c20e30;
+	transform: translateY(2px);
+}
+
+.login-button:active {
+	transform: translateY(0);
+}
+
+.role-selection {
+    text-align: center;
+}
+
+.role-selection h3 {
+    font-size: 20px;
+    margin-bottom: 15px;
+    color: #000000;
+}
+
+.role-selection select {
+    width: 100%;
+    padding: 10px;
+    margin-bottom: 15px;
+    border: 2px solid #ddd;
+    border-radius: 10px;
+    font-size: 14px;
+	background-color: #f5f5f5;
+	outline: none;
+}
+
+.role-selection select:focus {
+	border-color: #e71039;
+}
