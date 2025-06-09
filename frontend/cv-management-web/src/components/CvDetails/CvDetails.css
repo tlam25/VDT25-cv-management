@@ -1,3 +1,7 @@
+body {
+    justify-content: center;
+}
+
 .cv-template {
     max-width: 1000px;
     margin: 0 auto;

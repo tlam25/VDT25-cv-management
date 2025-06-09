@@ -18,10 +18,6 @@ const StaffLayout = () => {
             <MenuBar role='staff' />
 
             <div className="staff-content">
-                <div className="staff-greeting">
-                    <p>Xin chào: {user?.first_name}</p>
-                
-                </div>
                 <Outlet />
             </div>
             

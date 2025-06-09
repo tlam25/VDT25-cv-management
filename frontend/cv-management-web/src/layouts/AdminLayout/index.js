@@ -7,7 +7,7 @@ import './AdminLayout.css';
 
 import { Outlet } from 'react-router-dom';
 
-const AdminLayout = () => {
+const AdminLayout = ({}) => {
     const user = JSON.parse(localStorage.getItem('user'));
     useAuthGuard(['Admin']);
 
@@ -18,11 +18,6 @@ const AdminLayout = () => {
             <MenuBar role='admin' />
 
             <div className="admin-content">
-                <div className="admin-greeting">
-                    <p>Xin chào: {user?.first_name}</p>
-                   
-                </div>
-
                 <Outlet />
             </div>
 

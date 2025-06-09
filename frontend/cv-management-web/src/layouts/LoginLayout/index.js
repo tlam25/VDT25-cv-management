@@ -5,7 +5,6 @@ const LoginLayout = () => {
     return (
         <div>
             <Header />
-            {/* danh cho route child cua LoginLayout (LoginPage) */}
             <>
                 <Outlet /> 
             </> 

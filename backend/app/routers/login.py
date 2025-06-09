@@ -21,7 +21,7 @@ router = APIRouter(prefix="", tags=["login"])
 
 SECRET_KEY = "2b7d5895cea1f0d463b29cbe0af7dcb77ec7114fb137c51f53dd7a21d95369ff" # cmd: openssl rand -hex 32
 ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 30
+ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")

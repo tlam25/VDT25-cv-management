@@ -18,9 +18,6 @@ const PMLayout = () => {
             <MenuBar role='pm' />
 
             <div className="pm-content">
-                <div className="pm-greeting">
-                    <p>Xin chào: {user?.first_name}</p>
-                </div>
                 <Outlet />
             </div>
 

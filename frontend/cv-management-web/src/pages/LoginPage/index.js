@@ -83,16 +83,16 @@ const LoginPage = () => {
     const navigateRole = (role) => {
         switch (role) {
             case 'Admin':
-                navigate('/admin');
+                navigate('/admin/employeeslist');
                 break;
             case 'Project Manager':
-                navigate('/pm');
+                navigate('/pm/me');
                 break;
             case 'Leader':
-                navigate('/lead');
+                navigate('/lead/me');
                 break;
             case 'Staff':
-                navigate('/staff');
+                navigate('/staff/employeeslist');
                 break;
             default:
                 setError('Vai trò không hợp lệ!');

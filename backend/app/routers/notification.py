@@ -114,3 +114,28 @@ async def mark_notification_as_read(
     db.refresh(notification)
 
     return {"message": "Marked as read successfully", "notification_id": notification.notification_id, "is_read": notification.is_read}
+
+@router.get("/unread_count")
+async def get_unread_notifications_count(
+    current_user: UserResponse = Depends(get_current_user),
+    db: Session = Depends(get_db)
+):
+    if RoleType.admin.value in current_user.roles:
+        raise HTTPException(403, "Admin does not have permission to access this resource")
+
+    notifications_query = (
+        db.query(Notification)
+        .filter(
+            Notification.request_id.in_(
+                db.query(Request.request_id)
+                .filter(Request.cv_id.in_(
+                    db.query(CvItem.cv_id)
+                    .filter(CvItem.emp_id == current_user.emp_id)
+                ))
+            ),
+            Notification.is_read == False
+        )
+    )
+
+    unread_count = notifications_query.count()
+    return {"unread_count": unread_count}

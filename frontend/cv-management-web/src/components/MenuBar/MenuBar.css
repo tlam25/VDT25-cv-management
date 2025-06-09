@@ -169,3 +169,21 @@
 .popup-content-out button:nth-child(2):active {
     transform: translateY(0);
 }
+
+.menu-badge {
+    position: absolute;
+    bottom: 20px;
+    left: 120px;
+    background: #e71039;
+    color: #ffffff;
+    font-size: 15px;
+    padding: 10px 10px;
+    border-radius: 20px;
+    font-weight: 800;
+    min-width: 20px;
+    text-align: center;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.09);
+    border: 2px solid #ffffff;
+    z-index: 1;
+    /* pointer-events: none; */
+}

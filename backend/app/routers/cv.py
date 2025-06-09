@@ -18,6 +18,8 @@ from pydantic import BaseModel
 from typing import List, Optional
 from datetime import date
 
+from .login import UserResponse, get_current_user
+
 class TrainingSchema(BaseModel):
     training_id: int
     training_name: Optional[str]
@@ -343,10 +345,12 @@ async def update_cv(emp_id: int, cv_extra_data: CvExtraSchema, db: Session = Dep
     return await get_cv(emp_id, db=db)
 
 @router.delete("/{emp_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_cv(emp_id: int, db: Session = Depends(get_db)):
+async def delete_cv(emp_id: int, current_user: UserResponse = Depends(get_current_user), db: Session = Depends(get_db)):
     cv_item = db.query(CvItem).filter(CvItem.emp_id == emp_id).first()
     if not cv_item:
         raise HTTPException(status_code=404, detail="CV not found for this employee.")
+    if current_user.role != "admin" and current_user.emp_id != emp_id:
+        raise HTTPException(status_code=403, detail="You do not have permission to delete this CV.")
 
     requests = db.query(Request).filter(Request.cv_id == cv_item.cv_id).all()
     request_ids = [r.request_id for r in requests]

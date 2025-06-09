@@ -11,6 +11,7 @@ const fetchWithAuth = async (url, options = {}) => {
         localStorage.removeItem('access_token');
         localStorage.removeItem('user');
         window.location.href = '/'; // hoặc navigate('/') nếu đang trong component
+        alert('Phiên đăng nhập đã hết hạn hoặc không hợp lệ. Vui lòng đăng nhập lại.');
         return null;
     }
     return response;

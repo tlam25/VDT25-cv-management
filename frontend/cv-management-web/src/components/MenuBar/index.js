@@ -9,7 +9,7 @@ import {
     FaSignOutAlt 
 } from 'react-icons/fa';
 
-const MenuBar = ({ role }) => {
+const MenuBar = ({ role, unreadCount=0 }) => {
     const location = useLocation();
     const navigate = useNavigate();
     const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
@@ -36,18 +36,18 @@ const MenuBar = ({ role }) => {
     lead: [
         { name: 'CV của bạn', icon: <FaUser />, path: 'me' },
         { name: 'Danh sách nhân viên', icon: <FaUserFriends />, path: 'employeeslist' },
-        { name: 'Thông báo', icon: <FaBell />, path: 'notifications' },
+        { name: 'Thông báo', icon: <FaBell />, path: 'notifications', isNotification: true },
         { name: 'Đăng xuất', icon: <FaSignOutAlt  />, isLogout: true },
     ],
     pm: [
         { name: 'CV của bạn', icon: <FaUser />, path: 'me' },
         { name: 'Danh sách nhân viên', icon: <FaUserFriends />, path: 'employeeslist' },
-        { name: 'Thông báo', icon: <FaBell />, path: 'notifications' },
+        { name: 'Thông báo', icon: <FaBell />, path: 'notifications', isNotification: true },
         { name: 'Đăng xuất', icon: <FaSignOutAlt  />, isLogout: true },
     ],
     staff: [
         { name: 'CV của bạn', icon: <FaUser />, path: 'employeeslist' },
-        { name: 'Thông báo', icon: <FaBell />, path: 'notifications' },
+        { name: 'Thông báo', icon: <FaBell />, path: 'notifications', isNotification: true },
         { name: 'Đăng xuất', icon: <FaSignOutAlt  />, isLogout: true },
     ],
     };
@@ -87,7 +87,12 @@ const MenuBar = ({ role }) => {
                     key={index} 
                     className={`menu-item ${isActive ? 'active' : ''}`}
                 >
-                    <div className="menu-icon">{item.icon}</div>
+                    <div className="menu-icon" style={{position: 'relative'}}>
+                        {item.icon}
+                        {item.isNotification && unreadCount > 0 && (
+                            <span className="menu-badge">{unreadCount}</span>
+                        )}
+                    </div>
                     <div className="menu-label">{item.name}</div>
                 </Link>
                 );

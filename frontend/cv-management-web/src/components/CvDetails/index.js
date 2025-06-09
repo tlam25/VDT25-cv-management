@@ -627,14 +627,14 @@ const CvDetails = () => {
 
                     <div className="edit-delete-group">
                         {!isEditMode && (currentUser?.emp_id === Number(emp_id) || currentUser?.roles?.includes("Admin")) && (
-                            <>
                             <button className="edit-btn" onClick={handleEdit}>
                                 <FaEdit className="icon"/> Chỉnh sửa
                             </button>
+                        )}
+                        {!isEditMode && currentUser?.roles?.includes("Admin") && (
                             <button className="delete-btn" onClick={handleDelete}>
                                 <FaTrashAlt className="icon" /> Xóa CV
                             </button>
-                            </>
                         )}
                         {isEditMode && (
                             <div className="edit-action-group">
