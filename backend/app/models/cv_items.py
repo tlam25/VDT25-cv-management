@@ -5,7 +5,7 @@ import enum
 class CvStatus(enum.Enum):
     updated = "Updated"
     in_progress = "In Progress"
-    cancalled = "Cancelled"
+    cancelled = "Cancelled"
 
 class CvItem(Base):
     __tablename__ = "cv_items"

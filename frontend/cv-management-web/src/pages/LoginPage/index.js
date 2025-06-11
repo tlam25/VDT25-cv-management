@@ -54,7 +54,6 @@ const LoginPage = () => {
             }
 
             const userData = await userResponse.json();
-            console.log('Current User:', userData);
 
             localStorage.setItem('user', JSON.stringify(userData));
             setUserData(userData);

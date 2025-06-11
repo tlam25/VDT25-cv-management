@@ -122,4 +122,3 @@ async def cancel_request(
     db.commit()
 
     return {"detail": "Successfully cancelled request"}
-

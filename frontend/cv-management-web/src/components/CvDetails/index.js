@@ -9,6 +9,11 @@ import { FaEdit } from "react-icons/fa";
 import { LuMessageCirclePlus } from "react-icons/lu";
 import { LuMessageCircleX } from "react-icons/lu";
 
+import html2canvas from "html2canvas";
+import jsPDF from "jspdf";
+import { FaFilePdf } from "react-icons/fa";
+
+
 import "./CvDetails.css";
 
 const API = "http://127.0.0.1:8000";
@@ -17,8 +22,8 @@ const CvDetails = () => {
     const { emp_id } = useParams();
     const { state } = useLocation();
     const empInfo = state?.emp;
-    const navigate = useNavigate();
 
+    const navigate = useNavigate();
     const currentUser = JSON.parse(localStorage.getItem('user'));
 
     const [hasCv, setHasCv] = useState(true);
@@ -221,6 +226,7 @@ const CvDetails = () => {
 
     const handleEdit = () => {
         setEditData({ ...cvExtras });
+
         setIsEditMode(true);
     };
 
@@ -240,17 +246,56 @@ const CvDetails = () => {
         arr[idx] = { ...arr[idx], [field]: value };
         setEditData({ ...editData, trainings: arr });
     };
-    const handleAddTraining = () => {
-        setEditData({
-            ...editData,
-            trainings: [
+    const handleAddTraining = async () => {
+        try {
+            const newTraining = {
+                training_name: null,
+                start_date: null,
+                end_date: null,
+                status: null,
+                institution: null,
+                degree: null,
+                emp_id: Number(emp_id),
+            };
+
+            const res = await fetchWithAuth(`${API}/trainings/`, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(newTraining),
+            });
+
+            if (!res.ok) {
+                throw new Error("Lỗi khi thêm đào tạo");
+            }
+
+            const createdTraining = await res.json();
+
+            setEditData({
+                ...editData,
+                trainings: [
                 ...editData.trainings,
-                { training_name: "", start_date: "", end_date: "", status: "", institution: "", degree: "", emp_id: emp_id }
-            ]
-        });
+                {
+                    training_id: createdTraining.training_id,
+                    training_name: createdTraining.training_name || "",
+                    start_date: createdTraining.start_date || "",
+                    end_date: createdTraining.end_date || "",
+                    status: createdTraining.status || "",
+                    institution: createdTraining.institution || "",
+                    degree: createdTraining.degree || "",
+                    emp_id: createdTraining.emp_id,
+                },
+                ],
+            });
+        } catch (err) {
+            setError("Lỗi khi thêm đào tạo");
+        }
     };
-    const handleRemoveTraining = (idx) => {
+    const handleRemoveTraining = async (idx) => {
         const arr = [...editData.trainings];
+        const training = arr[idx];
+        await fetchWithAuth(`${API}/trainings/${training.training_id}`, {
+            method: "DELETE",
+        });
         arr.splice(idx, 1);
         setEditData({ ...editData, trainings: arr });
     };
@@ -269,7 +314,6 @@ const CvDetails = () => {
         });
     };
     const handleSaveNewCourseRow = async () => {
-        
         let course_id = newCourse.course_id;
         let course_name = "";
         let description = "";
@@ -296,7 +340,7 @@ const CvDetails = () => {
             description = courseObj?.description;
         }
         // tao ra enrollment moi khi da co course_id
-        const enrollmentRes = await fetchWithAuth(`${API}/enrollments/${emp_id}`, {
+        const enrollmentRes = await fetchWithAuth(`${API}/enrollments/`, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
             body: JSON.stringify({
@@ -348,8 +392,10 @@ const CvDetails = () => {
         setEditData({ ...editData, courses: arr });
     };
 
-    const handleSkillFieldChange = (field, value) => {
-        setNewSkill({ ...newSkill, [field]: value });
+    const handleEditSkillFieldChange = (idx, field, value) => {
+        const arr = [...editData.skills];
+        arr[idx] = { ...arr[idx], [field]: value };
+        setEditData({ ...editData, skills: arr });
     };
     const handleAddSkillRow = () => {
         setShowAddSkillRow(true);
@@ -414,8 +460,21 @@ const CvDetails = () => {
         });
     };
 
-    const handleRemoveSkill = (idx) => {
+    const handleRemoveSkill = async (idx) => {
         const arr = [...editData.skills];
+        const skill = arr[idx];
+
+        if (skill.has_skill_id) {
+            try {
+                await fetchWithAuth(`${API}/has_skill/${skill.has_skill_id}`, {
+                    method: "DELETE",
+                });
+            } catch (err) {
+                console.error("Loi khi xóa kỹ năng:", err);
+                setError("Lỗi khi xóa kỹ năng");
+                return;
+            }
+        }
         arr.splice(idx, 1);
         setEditData({ ...editData, skills: arr });
     };
@@ -429,10 +488,12 @@ const CvDetails = () => {
 
     // SAVE
     const handleSave = async () => {
+        const updatedData = { ...editData, editor_id: currentUser?.emp_id };
+
         await fetchWithAuth(`${API}/cv/${emp_id}`, {
             method: 'PATCH',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(editData)
+            body: JSON.stringify(updatedData)
         });
         setIsEditMode(false);
         setHasUnsavedChanges(false);
@@ -512,15 +573,41 @@ const CvDetails = () => {
                 message: requestMessage,
                 status: "pending"
             });
-            console.log('Pending request set:', {
-                request_id: data.request_id,
-            })
 
         } catch (err) {
             setRequestError(err.message || "Lỗi khi gửi yêu cầu");
         } finally {
             setIsRequesting(false);
         }
+    }
+
+    const fullName = `${empInfo.last_name} ${empInfo.first_name}`;
+
+    const handleExportPdf = async () => {
+        const cvArea = document.getElementById("cv-export-area");
+        if (!cvArea) return;
+
+        const canvas = await html2canvas(cvArea, {
+            scale: 4,
+            useCORS: true, 
+        });
+        const data = canvas.toDataURL("image/png");
+        const pdf = new jsPDF({
+            orientation: "portrait",
+            unit: "pt",
+            format: "a4",
+        });
+
+        const imgProperties = pdf.getImageProperties(data);
+        const pdfWidth = pdf.internal.pageSize.getWidth();
+        const pdfHeight = imgProperties.height * pdfWidth / imgProperties.width;
+
+        const pageHeight = pdf.internal.pageSize.getHeight();
+        const topOffset = (pageHeight - pdfHeight) / 2;
+
+        pdf.addImage(data, 'PNG', 0, topOffset > 0 ? topOffset : 0, pdfWidth, pdfHeight);
+
+        pdf.save(`CV_id_${empInfo.emp_id}_${fullName.replace(/\s+/g, '_')}.pdf`);
     }
 
     if (!empInfo) return <div>Không tìm thấy thông tin nhân viên.</div>;
@@ -533,11 +620,12 @@ const CvDetails = () => {
                         <FaArrowLeft className="icon"/> Quay lại
                     </button>
                     {(currentUser?.emp_id === Number(emp_id) || currentUser?.roles.includes("Admin")) && (
-                        <button className="edit-btn" onClick={handleCreate}>Tạo CV mới</button>
+                        <button className="add-cv-btn" onClick={handleCreate}>+ Tạo CV mới</button>
                     )}
+
                 </div>
 
-                <div className="text-center text-gray-600 mt-4">Chưa tạo CV. Nhấn vào "Tạo CV mới"!</div>
+                <div className="text-center text-gray-600 mt-4">Nhân viên này chưa tạo CV!</div>
             </div>
         )
     }
@@ -553,19 +641,25 @@ const CvDetails = () => {
     if (cvExtras.editor_id === 1) editorDisplay = "Admin";
     else if (Number(cvExtras.editor_id) === Number(emp_id)) editorDisplay = "Tôi";
 
-    const fullName = `${empInfo.last_name} ${empInfo.first_name}`.toUpperCase();
     const title = empInfo.roles && empInfo.roles.length > 0 ? empInfo.roles.join(', ') : "";
     const genderDisplay = empInfo.gender === "male" ? "Nam" : empInfo.gender === "female" ? "Nữ" : empInfo.gender;
     return (
         <div className="cv-details-container">
             <div className="grp-btn">
-                <button className="back-btn" onClick={handleBack}>
-                    <FaArrowLeft className="icon" /> Quay lại
-                </button>
+                <div className="left-btn-group">
+                    <button className="back-btn" onClick={handleBack}>
+                        <FaArrowLeft className="icon" /> Quay lại
+                    </button>
+                    {hasCv && !isEditMode && (
+                        <button className="export-pdf-btn" onClick={handleExportPdf}>
+                            <FaFilePdf className="icon" /> Xuất PDF
+                        </button>
+                    )}
+                </div>
+
                 <div className="right-btn-group">
                     <div className="request-btn-group">
-                        {hasCv && !isEditMode && (currentUser?.emp_id !== Number(emp_id)) && (
-                        
+                        {!isEditMode && (currentUser?.emp_id !== Number(emp_id)) && (
                             <button
                                 className="request-btn create-request-btn"
                                 onClick={() => {
@@ -689,172 +783,245 @@ const CvDetails = () => {
                 </div>
             </div>
 
-            <div className="cv-template">
-                <div className="cv-header">
-                    <div className="cv-avatar">
-                        <div className="avatar-placeholder">Ảnh chân dung</div>
-                    </div>
-                    <div className="cv-title">
-                        <h1 className="cv-name">
-                            {fullName}
-                        </h1>
-                        <div className="cv-role">
-                            [{title}]
+            <div id="cv-export-area">
+                <div className="cv-template">
+                    <div className="cv-header">
+                        <div className="cv-avatar">
+                            <div className="avatar-placeholder">Ảnh chân dung</div>
+                        </div>
+                        <div className="cv-title">
+                            <h1 className="cv-name">
+                                {fullName.toUpperCase()}
+                            </h1>
+                            <div className="cv-role">
+                                [{title}]
+                            </div>
                         </div>
                     </div>
-                </div>
 
-                <h2 className="cv-section-title">TÓM TẮT</h2>
-                <div className="cv-summary">
-                    {isEditMode ? (
-                        <textarea
-                            value={editData.summary}
-                            onChange={handleSummaryChange}
-                            rows={4}
-                        />
-                    ) : (
-                        <p>{cvExtras.summary || <i className="info-none">Chưa cập nhật tóm tắt</i>}</p>
-                    )}
-                </div>
+                    <h2 className="cv-section-title">TÓM TẮT</h2>
+                    <div className="cv-summary">
+                        {isEditMode ? (
+                            <textarea
+                                value={editData.summary}
+                                onChange={handleSummaryChange}
+                                rows={4}
+                            />
+                        ) : (
+                            <p>{cvExtras.summary || <i className="info-none">Chưa cập nhật tóm tắt</i>}</p>
+                        )}
+                    </div>
 
-                <h2 className="cv-section-title">THÔNG TIN CHUNG</h2>
-                <div className="cv-info-section">
-                    <div className="cv-info-2col">
-                        <div className="cv-info-personal">
-                            <b>Thông tin cá nhân</b>
-                            <ul className="cv-info-list">
-                                <li><b>Họ tên:</b> {empInfo.last_name} {empInfo.first_name}</li>
-                                <li><b>Mã nhân viên:</b> {empInfo.emp_id}</li>
-                                <li><b>Giới tính:</b> {genderDisplay}</li>
-                                <li><b>Ngày sinh:</b> {empInfo.dob ? new Date(empInfo.dob).toLocaleDateString('vi-VN') : ""}</li>
-                                <li><b>Phòng ban:</b> {empInfo.department}</li>
-                                <li>
-                                    <b>Email:</b>{" "}
+                    <h2 className="cv-section-title">THÔNG TIN CHUNG</h2>
+                    <div className="cv-info-section">
+                        <div className="cv-info-2col">
+                            <div className="cv-info-personal">
+                                <b>Thông tin cá nhân</b>
+                                <ul className="cv-info-list">
+                                    <li><b>Họ tên:</b> {empInfo.last_name} {empInfo.first_name}</li>
+                                    <li><b>Mã nhân viên:</b> {empInfo.emp_id}</li>
+                                    <li><b>Giới tính:</b> {genderDisplay}</li>
+                                    <li><b>Ngày sinh:</b> {empInfo.dob ? new Date(empInfo.dob).toLocaleDateString('vi-VN') : ""}</li>
+                                    <li><b>Phòng ban:</b> {empInfo.department}</li>
+                                    <li>
+                                        <b>Email:</b>{" "}
+                                        {isEditMode ? (
+                                            <input
+                                                type="email"
+                                                value={editData.email}
+                                                onChange={e => handleFieldChange("email", e.target.value)}
+                                            />
+                                        ) : (
+                                            cvExtras.email || <i className="info-none">Chưa cập nhật</i>
+                                        )}
+                                    </li>
+                                    <li>
+                                        <b>Điện thoại:</b>{" "}
+                                        {isEditMode ? (
+                                            <input
+                                                type="text"
+                                                value={editData.phone}
+                                                onChange={e => handleFieldChange("phone", e.target.value)}
+                                            />
+                                        ) : (
+                                            cvExtras.phone || <i className="info-none">Chưa cập nhật</i>
+                                        )}
+                                    </li>
+                                    <li>
+                                        <b>Địa chỉ:</b>{" "}
+                                        {isEditMode ? (
+                                            <input
+                                                type="text"
+                                                value={editData.address}
+                                                onChange={e => handleFieldChange("address", e.target.value)}
+                                            />
+                                        ) : (
+                                            cvExtras.address || <i className="info-none">Chưa cập nhật</i>
+                                        )}
+                                    </li>
+                                </ul>
+                            </div>
+
+                            <div className="cv-training">
+                                <b>Đào tạo</b>
+                                <ul className="cv-info-list">
                                     {isEditMode ? (
-                                        <input
-                                            type="email"
-                                            value={editData.email}
-                                            onChange={e => handleFieldChange("email", e.target.value)}
-                                        />
+                                        <>
+                                            {editData.trainings.map((t, i) => (
+                                                <li key={t.training_id || i}>
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Tên đào tạo"
+                                                        value={t.training_name || ""}
+                                                        onChange={e => handleTrainingFieldChange(i, "training_name", e.target.value)}
+                                                        className="input-training-name"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Tổ chức"
+                                                        value={t.institution || ""}
+                                                        onChange={e => handleTrainingFieldChange(i, "institution", e.target.value)}
+                                                        className="input-institution"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Bằng cấp"
+                                                        value={t.degree || ""}
+                                                        onChange={e => handleTrainingFieldChange(i, "degree", e.target.value)}
+                                                        className="input-degree"
+                                                    />
+                                                    <input
+                                                        type="date"
+                                                        value={t.start_date ? t.start_date.slice(0,10) : ""}
+                                                        onChange={e => handleTrainingFieldChange(i, "start_date", e.target.value)}
+                                                        className="input-date"
+                                                    />
+                                                    <input
+                                                        type="date"
+                                                        value={t.end_date ? t.end_date.slice(0,10) : ""}
+                                                        onChange={e => handleTrainingFieldChange(i, "end_date", e.target.value)}
+                                                        className="input-date"
+                                                    />
+                                                    <select
+                                                        value={t.status || ""}
+                                                        onChange={e => handleTrainingFieldChange(i, "status", e.target.value)}
+                                                        className="select-status"
+                                                    >
+                                                        <option value="">Trạng thái</option>
+                                                        <option value="Completed">Hoàn thành</option>
+                                                        <option value="In Progress">Đang học</option>
+                                                    </select>
+                                                    <button className="bin" type="button" onClick={() => handleRemoveTraining(i)}>
+                                                        <FaTrashAlt />
+                                                    </button>
+                                                </li>
+                                            ))}
+                                            <li>
+                                                <button type="button" onClick={handleAddTraining}>+ Thêm dòng</button>
+                                            </li>
+                                        </>
                                     ) : (
-                                        cvExtras.email || <i className="info-none">Chưa cập nhật</i>
+                                        <>
+                                            {cvExtras.trainings.length === 0 && <li><i className="info-none">Chưa cập nhật thông tin đào tạo</i></li>}
+                                            {cvExtras.trainings.map((t, i) => (
+                                                <li key={t.training_id || i}>
+                                                    {t.training_name} - {t.institution} <i>({t.status})</i>
+                                                    {(t.degree || t.start_date || t.end_date) && (
+                                                        <div className="cv-training-details">
+                                                            {t.degree && (
+                                                                <div><b>Bằng cấp:</b> {t.degree}</div>
+                                                            )}
+                                                            {(t.start_date || t.end_date) && (
+                                                                <div>
+                                                                    <b>Thời gian:</b>
+                                                                    {t.status?.toLowerCase() === "in progress"
+                                                                        ? (
+                                                                            t.start_date ? ` ${new Date(t.start_date).toLocaleDateString('vi-VN')}` : ''
+                                                                        )
+                                                                        : t.start_date && t.end_date
+                                                                        ? ` ${new Date(t.start_date).toLocaleDateString('vi-VN')} - ${new Date(t.end_date).toLocaleDateString('vi-VN')}`
+                                                                        : t.start_date
+                                                                            ? ` ${new Date(t.start_date).toLocaleDateString('vi-VN')}`
+                                                                            : t.end_date
+                                                                            ? ` ${new Date(t.end_date).toLocaleDateString('vi-VN')}`
+                                                                            : ''
+                                                                    }
+                                                                </div>
+                                                            )}
+                                                        </div>
+                                                    )}
+                                                </li>
+                                            ))}
+                                        </>
                                     )}
-                                </li>
-                                <li>
-                                    <b>Điện thoại:</b>{" "}
-                                    {isEditMode ? (
-                                        <input
-                                            type="text"
-                                            value={editData.phone}
-                                            onChange={e => handleFieldChange("phone", e.target.value)}
-                                        />
-                                    ) : (
-                                        cvExtras.phone || <i className="info-none">Chưa cập nhật</i>
-                                    )}
-                                </li>
-                                <li>
-                                    <b>Địa chỉ:</b>{" "}
-                                    {isEditMode ? (
-                                        <input
-                                            type="text"
-                                            value={editData.address}
-                                            onChange={e => handleFieldChange("address", e.target.value)}
-                                        />
-                                    ) : (
-                                        cvExtras.address || <i className="info-none">Chưa cập nhật</i>
-                                    )}
-                                </li>
-                            </ul>
+                                </ul>
+                            </div>
                         </div>
 
-                        <div className="cv-training">
-                            <b>Đào tạo</b>
-                            <ul className="cv-info-list">
+                        <div>
+                            <b>Thông tin khóa học đã tham gia:</b>
+                            <ul className="cv-course-list">
                                 {isEditMode ? (
                                     <>
-                                        {editData.trainings.map((t, i) => (
-                                            <li key={t.training_id || i}>
-                                                <input
-                                                    type="text"
-                                                    placeholder="Tên đào tạo"
-                                                    value={t.training_name || ""}
-                                                    onChange={e => handleTrainingFieldChange(i, "training_name", e.target.value)}
-                                                    className="input-training-name"
-                                                />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Tổ chức"
-                                                    value={t.institution || ""}
-                                                    onChange={e => handleTrainingFieldChange(i, "institution", e.target.value)}
-                                                    className="input-institution"
-                                                />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Bằng cấp"
-                                                    value={t.degree || ""}
-                                                    onChange={e => handleTrainingFieldChange(i, "degree", e.target.value)}
-                                                    className="input-degree"
-                                                />
-                                                <input
-                                                    type="date"
-                                                    value={t.start_date ? t.start_date.slice(0,10) : ""}
-                                                    onChange={e => handleTrainingFieldChange(i, "start_date", e.target.value)}
-                                                    className="input-date"
-                                                />
-                                                <input
-                                                    type="date"
-                                                    value={t.end_date ? t.end_date.slice(0,10) : ""}
-                                                    onChange={e => handleTrainingFieldChange(i, "end_date", e.target.value)}
-                                                    className="input-date"
-                                                />
-                                                <select
-                                                    value={t.status || ""}
-                                                    onChange={e => handleTrainingFieldChange(i, "status", e.target.value)}
-                                                    className="select-status"
-                                                >
-                                                    <option value="">Trạng thái</option>
-                                                    <option value="Completed">Hoàn thành</option>
-                                                    <option value="In Progress">Đang học</option>
-                                                </select>
-                                                <button className="bin" type="button" onClick={() => handleRemoveTraining(i)}>
-                                                    <FaTrashAlt />
-                                                </button>
+                                        {editData.courses.map((c, i) => (
+                                            <li key={c.enrollment_id || c.course_id || i}>
+                                                <div className="cv-course-fields">
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Tên khoá học"
+                                                        value={c.course_name || ""}
+                                                        onChange={e => handleEditCourseEnrollmentFieldChange(i, "course_name", e.target.value)}
+                                                        className="input-course-name"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Mô tả"
+                                                        value={c.description || ""}
+                                                        onChange={e => handleEditCourseEnrollmentFieldChange(i, "description", e.target.value)}
+                                                        className="input-description"
+                                                    />
+                                                    <select
+                                                        value={c.status || "In Progress"}
+                                                        onChange={e => handleEditCourseEnrollmentFieldChange(i, "status", e.target.value)}
+                                                        className="select-status"
+                                                    >
+                                                        <option value="In Progress">Chưa hoàn thành</option>
+                                                        <option value="Completed">Đã hoàn thành</option>
+                                                    </select>
+                                                    <input
+                                                        type="date"
+                                                        value={c.complete_date ? c.complete_date.slice(0,10) : ""}
+                                                        onChange={e => handleEditCourseEnrollmentFieldChange(i, "complete_date", e.target.value)}
+                                                        disabled={c.status !== "Completed"}
+                                                        className="input-complete-date"
+                                                    />
+                                                    <input
+                                                        type="text"
+                                                        placeholder="Thời lượng"
+                                                        value={c.duration || ""}
+                                                        onChange={e => handleEditCourseEnrollmentFieldChange(i, "duration", e.target.value)}
+                                                        className="input-duration"
+                                                    />
+                                                    <button className="bin" type="button" onClick={() => handleRemoveCourse(i)}>
+                                                        <FaTrashAlt />
+                                                    </button>
+                                                </div>
                                             </li>
                                         ))}
                                         <li>
-                                            <button type="button" onClick={handleAddTraining}>+ Thêm dòng</button>
+                                            <button type="button" className="add-btn" onClick={handleAddCourseRow}>+ Thêm khoá học</button>
                                         </li>
                                     </>
                                 ) : (
                                     <>
-                                        {cvExtras.trainings.length === 0 && <li><i className="info-none">Chưa cập nhật thông tin đào tạo</i></li>}
-                                        {cvExtras.trainings.map((t, i) => (
-                                            <li key={t.training_id || i}>
-                                                {t.training_name} - {t.institution} <i>({t.status})</i>
-                                                {(t.degree || t.start_date || t.end_date) && (
-                                                    <div className="cv-training-details">
-                                                        {t.degree && (
-                                                            <div><b>Bằng cấp:</b> {t.degree}</div>
-                                                        )}
-                                                        {(t.start_date || t.end_date) && (
-                                                            <div>
-                                                                <b>Thời gian:</b>
-                                                                {t.status?.toLowerCase() === "in progress"
-                                                                    ? (
-                                                                        t.start_date ? ` ${new Date(t.start_date).toLocaleDateString('vi-VN')}` : ''
-                                                                    )
-                                                                    : t.start_date && t.end_date
-                                                                    ? ` ${new Date(t.start_date).toLocaleDateString('vi-VN')} - ${new Date(t.end_date).toLocaleDateString('vi-VN')}`
-                                                                    : t.start_date
-                                                                        ? ` ${new Date(t.start_date).toLocaleDateString('vi-VN')}`
-                                                                        : t.end_date
-                                                                        ? ` ${new Date(t.end_date).toLocaleDateString('vi-VN')}`
-                                                                        : ''
-                                                                }
-                                                            </div>
-                                                        )}
-                                                    </div>
-                                                )}
+                                        {cvExtras.courses.length === 0 && <li><i className="info-none">Chưa cập nhật khóa học</i></li>}
+                                        {cvExtras.courses.map((c, i) => (
+                                            <li key={c.enrollment_id || c.course_id || i}>
+                                                {c.course_name}
+                                                {c.description ? <> - {c.description}</> : null}
+                                                {c.status && c.status !== "Completed" && <> <i>({c.status})</i></>}
+                                                {c.complete_date ? <> - Hoàn thành: {new Date(c.complete_date).toLocaleDateString('vi-VN')}</> : null}
+                                                {c.duration ? <> - Thời lượng: {c.duration}</> : null}
                                             </li>
                                         ))}
                                     </>
@@ -862,120 +1029,49 @@ const CvDetails = () => {
                             </ul>
                         </div>
                     </div>
-
+                    
                     <div>
-                        <b>Thông tin khóa học đã tham gia:</b>
-                        <ul className="cv-course-list">
+                        <b>KỸ NĂNG</b>
+                        <ul className="cv-skill-list">
                             {isEditMode ? (
                                 <>
-                                    {editData.courses.map((c, i) => (
-                                        <li key={c.enrollment_id || c.course_id || i}>
+                                    {editData.skills.map((s, i) => (
+                                        <li key={s.skill_id || i}>
                                             <div className="cv-course-fields">
                                                 <input
                                                     type="text"
-                                                    placeholder="Tên khoá học"
-                                                    value={c.course_name || ""}
-                                                    onChange={e => handleEditCourseEnrollmentFieldChange(i, "course_name", e.target.value)}
-                                                    className="input-course-name"
+                                                    placeholder="Tên kỹ năng"
+                                                    value={s.skill_name || ""}
+                                                    onChange={e => handleEditSkillFieldChange(i, "skill_name", e.target.value)}
+                                                    className="input-skill-name"
                                                 />
                                                 <input
                                                     type="text"
                                                     placeholder="Mô tả"
-                                                    value={c.description || ""}
-                                                    onChange={e => handleEditCourseEnrollmentFieldChange(i, "description", e.target.value)}
+                                                    value={s.description || ""}
+                                                    onChange={e => handleEditSkillFieldChange(i, "description", e.target.value)}
                                                     className="input-description"
                                                 />
-                                                <select
-                                                    value={c.status || "In Progress"}
-                                                    onChange={e => handleEditCourseEnrollmentFieldChange(i, "status", e.target.value)}
-                                                    className="select-status"
-                                                >
-                                                    <option value="In Progress">Chưa hoàn thành</option>
-                                                    <option value="Completed">Đã hoàn thành</option>
-                                                </select>
-                                                <input
-                                                    type="date"
-                                                    value={c.complete_date ? c.complete_date.slice(0,10) : ""}
-                                                    onChange={e => handleEditCourseEnrollmentFieldChange(i, "complete_date", e.target.value)}
-                                                    disabled={c.status !== "Completed"}
-                                                    className="input-complete-date"
-                                                />
-                                                <input
-                                                    type="text"
-                                                    placeholder="Thời lượng"
-                                                    value={c.duration || ""}
-                                                    onChange={e => handleEditCourseEnrollmentFieldChange(i, "duration", e.target.value)}
-                                                    className="input-duration"
-                                                />
-                                                <button className="bin" type="button" onClick={() => handleRemoveCourse(i)}>
+                                                <button className="bin" type="button" onClick={() => handleRemoveSkill(i)}>
                                                     <FaTrashAlt />
                                                 </button>
                                             </div>
                                         </li>
                                     ))}
                                     <li>
-                                        <button type="button" className="add-btn" onClick={handleAddCourseRow}>+ Thêm khoá học</button>
+                                        <button type="button" className="add-btn" onClick={handleAddSkillRow}>+ Thêm kỹ năng</button>
                                     </li>
                                 </>
                             ) : (
                                 <>
-                                    {cvExtras.courses.length === 0 && <li><i className="info-none">Chưa cập nhật khóa học</i></li>}
-                                    {cvExtras.courses.map((c, i) => (
-                                        <li key={c.enrollment_id || c.course_id || i}>
-                                            {c.course_name}
-                                            {c.description ? <> - {c.description}</> : null}
-                                            {c.status && c.status !== "Completed" && <> <i>({c.status})</i></>}
-                                            {c.complete_date ? <> - Hoàn thành: {new Date(c.complete_date).toLocaleDateString('vi-VN')}</> : null}
-                                            {c.duration ? <> - Thời lượng: {c.duration}</> : null}
-                                        </li>
+                                    {cvExtras.skills.length === 0 && <li><i className="info-none">Chưa cập nhật kỹ năng</i></li>}
+                                    {cvExtras.skills.map((s, i) => (
+                                        <li key={s.skill_id || i}>{s.skill_name}{s.description ? `: ${s.description}` : ""}</li>
                                     ))}
                                 </>
                             )}
                         </ul>
                     </div>
-                </div>
-                
-                <div>
-                    <b>KỸ NĂNG</b>
-                    <ul className="cv-skill-list">
-                        {isEditMode ? (
-                            <>
-                                {editData.skills.map((s, i) => (
-                                    <li key={s.skill_id || i}>
-                                        <div className="cv-course-fields">
-                                            <input
-                                                type="text"
-                                                placeholder="Tên kỹ năng"
-                                                value={s.skill_name || ""}
-                                                onChange={e => handleSkillFieldChange(i, "skill_name", e.target.value)}
-                                                className="input-skill-name"
-                                            />
-                                            <input
-                                                type="text"
-                                                placeholder="Mô tả"
-                                                value={s.description || ""}
-                                                onChange={e => handleSkillFieldChange(i, "description", e.target.value)}
-                                                className="input-description"
-                                            />
-                                            <button className="bin" type="button" onClick={() => handleRemoveSkill(i)}>
-                                                <FaTrashAlt />
-                                            </button>
-                                        </div>
-                                    </li>
-                                ))}
-                                <li>
-                                    <button type="button" className="add-btn" onClick={handleAddSkillRow}>+ Thêm kỹ năng</button>
-                                </li>
-                            </>
-                        ) : (
-                            <>
-                                {cvExtras.skills.length === 0 && <li><i className="info-none">Chưa cập nhật kỹ năng</i></li>}
-                                {cvExtras.skills.map((s, i) => (
-                                    <li key={s.skill_id || i}>{s.skill_name}{s.description ? `: ${s.description}` : ""}</li>
-                                ))}
-                            </>
-                        )}
-                    </ul>
                 </div>
             </div>
 

@@ -1,0 +1,38 @@
+.filter-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.toggle-emp-list {
+    background: #e71039;
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 16px;
+    white-space: nowrap;
+}
+
+.toggle-emp-list:hover {
+    background: #b70e2f;
+}
+
+.filter-bar-container select {
+    padding: 8px 12px;
+    border: 2px solid #e71039;
+    border-radius: 10px;
+    font-size: 16px;
+    outline: none;
+    background: #fff;
+    transition: border-color 0.18s;
+}
+
+.filter-bar-container select:focus {
+    border-color: #b70e2f;
+}

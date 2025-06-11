@@ -32,14 +32,11 @@ async def create_has_skill(has_skill: HasSkillCreateSchema, db: Session = Depend
     db.refresh(new_has_skill)
     return new_has_skill
 
-@router.delete("/{skill_id}", status_code=status.HTTP_204_NO_CONTENT)
-async def delete_enrollment(skill_id: int, db: Session = Depends(get_db)):
-    enrollment = db.query(HasSkill).filter(HasSkill.enrollment_id == skill_id).first()
-    if not enrollment:
-        raise HTTPException(
-            status_code=status.HTTP_404_NOT_FOUND,
-            detail=f"Enrollment with id {skill_id} not found"
-        )
-    db.delete(enrollment)
+@router.delete("/{id}", status_code=status.HTTP_204_NO_CONTENT)
+async def delete_has_skill(id: int, db: Session = Depends(get_db)):
+    has_skill = db.query(HasSkill).filter(HasSkill.id == id).first()
+    if not has_skill:
+        raise HTTPException(status_code=404, detail="HasSkill not found")
+    db.delete(has_skill)
     db.commit()
     return {"detail": "HasSkill deleted successfully"}

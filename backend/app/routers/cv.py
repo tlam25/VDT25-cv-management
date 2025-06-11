@@ -30,6 +30,7 @@ class TrainingSchema(BaseModel):
     degree: Optional[str]
 
 class CourseSchema(BaseModel):
+    enrollment_id: int
     course_id: int
     course_name: Optional[str]
     description: Optional[str]
@@ -39,17 +40,17 @@ class CourseSchema(BaseModel):
     duration: Optional[str] = None
 
 class SkillSchema(BaseModel):
+    id: int
     skill_id: int
     skill_name: Optional[str]
     description: Optional[str]
 
 class CvExtraSchema(BaseModel):
     cv_id: Optional[int] = None
-    editor_id: int = None 
+    editor_id: Optional[int] = None
     update_date: date = None
     status: Optional[str] = None
     summary: Optional[str] = None
-    editor_id: Optional[int] = None 
     update_date: Optional[date] = None
     trainings: Optional[List[TrainingSchema]] = []
     courses: Optional[List[CourseSchema]] = []
@@ -93,6 +94,7 @@ async def get_cv(emp_id: int, db: Session = Depends(get_db)):
         if course:
             courses_schema.append(
                 CourseSchema(
+                    enrollment_id=e.enrollment_id,
                     course_id=course.course_id,
                     course_name=course.course_name,
                     description=course.description,
@@ -108,11 +110,12 @@ async def get_cv(emp_id: int, db: Session = Depends(get_db)):
     skills = db.query(Skill).filter(Skill.skill_id.in_(skill_ids)).all()
     skills_schema = [
         SkillSchema(
-            skill_id=s.skill_id,
-            skill_name=s.skill_name,
-            description=s.description
-        )
-        for s in skills
+        id=hs.id,
+        skill_id=s.skill_id,
+        skill_name=s.skill_name,
+        description=s.description
+    )
+    for hs, s in [(hs, db.query(Skill).filter(Skill.skill_id == hs.skill_id).first()) for hs in has_skills]
     ]
 
     emp = db.query(Employee).filter(Employee.emp_id == emp_id).first()
@@ -136,6 +139,10 @@ async def get_cv(emp_id: int, db: Session = Depends(get_db)):
 
 @router.post("/{emp_id}", response_model=CvExtraSchema)
 async def create_cv(emp_id: int, cv_extra_data: CvExtraSchema, db: Session = Depends(get_db)):
+    editor_id = cv_extra_data.editor_id
+    if editor_id not in [emp_id, 1]:
+        raise HTTPException(status_code=403, detail="Editor must be the employee or admin.")
+
     emp = db.query(Employee).filter(Employee.emp_id == emp_id).first()
     if not emp:
         raise HTTPException(status_code=404, detail="Employee not found.")
@@ -143,11 +150,7 @@ async def create_cv(emp_id: int, cv_extra_data: CvExtraSchema, db: Session = Dep
     existing_cv = db.query(CvItem).filter(CvItem.emp_id == emp.emp_id).first()
     if existing_cv:
         raise HTTPException(status_code=400, detail="CV already exists for this employee.")
-
-    editor_id = cv_extra_data.editor_id or emp_id
-    if editor_id not in [emp_id, 1]: 
-        raise HTTPException(status_code=403, detail="Editor must be the employee or admin.")
-
+    
     if cv_extra_data.email:
         emp.email = cv_extra_data.email
     if cv_extra_data.phone:
@@ -231,7 +234,7 @@ async def create_cv(emp_id: int, cv_extra_data: CvExtraSchema, db: Session = Dep
 
 @router.patch("/{emp_id}", response_model=CvExtraSchema)
 async def update_cv(emp_id: int, cv_extra_data: CvExtraSchema, db: Session = Depends(get_db)):
-    editor_id = cv_extra_data.editor_id or emp_id
+    editor_id = cv_extra_data.editor_id
     if editor_id not in [emp_id, 1]:
         raise HTTPException(status_code=403, detail="Editor must be the employee or admin.")
 
@@ -286,6 +289,14 @@ async def update_cv(emp_id: int, cv_extra_data: CvExtraSchema, db: Session = Dep
 
     if cv_extra_data.courses is not None:
         old_enrollments = {e.course_id: e for e in db.query(Enrollment).filter(Enrollment.emp_id == emp_id).all()}
+        new_enrollment_ids = {course.course_id for course in cv_extra_data.courses if course.course_id}
+
+        # remove old enrollments
+        for enrollment_id, enrollment in old_enrollments.items():
+            if enrollment.course_id not in new_enrollment_ids:
+                db.delete(enrollment)
+
+        #  update or add new enrollments
         for course_data in cv_extra_data.courses:
             if not course_data.course_id:
                 continue 
@@ -307,6 +318,14 @@ async def update_cv(emp_id: int, cv_extra_data: CvExtraSchema, db: Session = Dep
 
     if cv_extra_data.skills is not None:
         existing_has_skills = {hs.skill_id: hs for hs in db.query(HasSkill).filter(HasSkill.emp_id == emp_id).all()}
+        new_skill_ids = {skill.skill_id for skill in cv_extra_data.skills if skill.skill_id}
+
+        # remove old has_skill records
+        for hs_id, hs in existing_has_skills.items():
+            if hs.skill_id not in new_skill_ids:
+                db.delete(hs)
+
+        # add new has_skill records
         for skill_data in cv_extra_data.skills:
             if not skill_data.skill_id:
                 continue  
@@ -349,7 +368,7 @@ async def delete_cv(emp_id: int, current_user: UserResponse = Depends(get_curren
     cv_item = db.query(CvItem).filter(CvItem.emp_id == emp_id).first()
     if not cv_item:
         raise HTTPException(status_code=404, detail="CV not found for this employee.")
-    if current_user.role != "admin" and current_user.emp_id != emp_id:
+    if "Admin" not in current_user.roles:
         raise HTTPException(status_code=403, detail="You do not have permission to delete this CV.")
 
     requests = db.query(Request).filter(Request.cv_id == cv_item.cv_id).all()

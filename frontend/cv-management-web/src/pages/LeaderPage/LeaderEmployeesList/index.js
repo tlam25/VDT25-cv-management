@@ -12,8 +12,11 @@ const LeaderEmployeesList = () => {
     const [error, setError] = useState('');
     const navigate = useNavigate();
 
+    const [employeesWithoutCV, setEmployeesWithoutCV] = useState([]);
+    const [showEmployeesWithoutCV, setShowEmployeesWithoutCV] = useState(false);
+
     const [searchTerm, setSearchTerm] = useState('');
-    const filteredEmployees = employees.filter(emp => 
+    const filteredEmployees = (showEmployeesWithoutCV ? employeesWithoutCV : employees).filter(emp => 
         (emp.fullname || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (emp.first_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
         (emp.last_name || "").toLowerCase().includes(searchTerm.toLowerCase())
@@ -44,11 +47,35 @@ const LeaderEmployeesList = () => {
             }
         };
 
-        fetchEmployees();
+        const fetchEmployeesWithoutCV = async () => {
+            try {
+                const response = await fetchWithAuth(`${API}/lead/employees_without_cv`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Không thể lấy danh sách nhân viên chưa có CV!');
+                }
+
+                const data = await response.json();
+                setEmployeesWithoutCV(data.employees_without_cv);
+            } catch (err) {
+                setError(err.message);
+            }
+        };
+
+        Promise.all([fetchEmployees(), fetchEmployeesWithoutCV()])
+            .finally(() => setLoading(false));
     }, []);
 
     const handleRowClick = (emp) => {
         navigate(`cv/${emp.emp_id}`, { state: { emp } });
+    };
+    const toggleEmployeeList = () => {
+        setShowEmployeesWithoutCV(!showEmployeesWithoutCV);
     };
 
     if (loading) {
@@ -60,11 +87,23 @@ const LeaderEmployeesList = () => {
 
     return (
         <div>
-            <SearchBar onSearch={setSearchTerm} />
+            <div className="filter-container">
+                <SearchBar onSearch={setSearchTerm} />
+
+                <button className="toggle-emp-list" onClick={toggleEmployeeList}>
+                    {showEmployeesWithoutCV ? "Xem tất cả nhân viên" : "Xem nhân viên chưa có CV"}
+                </button>
+            </div>
+
+            <p>
+                {showEmployeesWithoutCV
+                    ? `Số nhân viên chưa có CV: ${filteredEmployees.length}`
+                    : `Tổng số nhân viên: ${filteredEmployees.length}`}
+            </p>
 
             <EmployeesList
                 employees={filteredEmployees}
-                title="Danh sách nhân viên"
+                title={showEmployeesWithoutCV ? "Danh sách nhân viên chưa có CV" : "Danh sách nhân viên"}
                 onRowClick={handleRowClick}
             />
 

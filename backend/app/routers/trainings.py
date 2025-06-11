@@ -15,7 +15,7 @@ class TrainingCreate(BaseModel):
     status: Optional[TrainingStatus] = None
     institution: Optional[str] = None
     degree: Optional[str] = None
-    emp_id: int
+    emp_id: Optional[int] = None
 
 class TrainingSchemas(TrainingCreate):
     training_id: int

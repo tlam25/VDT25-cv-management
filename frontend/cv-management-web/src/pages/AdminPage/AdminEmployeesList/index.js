@@ -5,6 +5,8 @@ import EmployeesList from '../../../components/EmployeesList';
 import SearchBar from '../../../components/SearchBar';
 import FilterBar from '../../../components/FilterBar';
 
+import './AdminEmployeesList.css';
+
 const API = "http://127.0.0.1:8000";
 
 const AdminEmployeesList = () => {
@@ -17,7 +19,10 @@ const AdminEmployeesList = () => {
     const [departments, setDepartments] = useState([]);
     const [selectedDepartment, setSelectedDepartment] = useState('');
 
-    const filteredEmployees = employees.filter(emp => {
+    const [employeesWithoutCV, setEmployeesWithoutCV] = useState([]);
+    const [showEmployeesWithoutCV, setShowEmployeesWithoutCV] = useState(false);
+
+    const filteredEmployees = (showEmployeesWithoutCV ? employeesWithoutCV : employees).filter(emp => {
         const matchSearch =
             (emp.fullname || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
             (emp.first_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -51,6 +56,26 @@ const AdminEmployeesList = () => {
             }
         };
 
+        const fetchEmployeesWithoutCV = async () => {
+            try {
+                const response = await fetchWithAuth(`${API}/admin/employees_without_cv`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Không thể lấy danh sách nhân viên chưa có CV!');
+                }
+
+                const data = await response.json();
+                setEmployeesWithoutCV(data.employees_without_cv);
+            } catch (err) {
+                setError(err.message);
+            }
+        };
+
         const fetchDepartments = async () => {
             try {
                 const response = await fetchWithAuth(`${API}/departments`, {
@@ -67,12 +92,15 @@ const AdminEmployeesList = () => {
         };
 
 
-        fetchEmployees();
-        fetchDepartments();
+        Promise.all([fetchEmployees(), fetchEmployeesWithoutCV(), fetchDepartments()])
+            .finally(() => setLoading(false));
     }, []);
 
     const handleRowClick = (emp) => {
         navigate(`cv/${emp.emp_id}`, { state: { emp } });
+    };
+    const toggleEmployeeList = () => {
+        setShowEmployeesWithoutCV(!showEmployeesWithoutCV);
     };
 
     if (loading) {
@@ -84,19 +112,37 @@ const AdminEmployeesList = () => {
 
     return (
         <div>
-            <SearchBar onSearch={setSearchTerm} />
-            <FilterBar
-                departments={departments}
-                selectedDepartment={selectedDepartment}
-                onDepartmentChange={setSelectedDepartment}
+            <div className="filter-container">
+                <SearchBar onSearch={setSearchTerm} />
+                <FilterBar
+                    departments={departments}
+                    selectedDepartment={selectedDepartment}
+                    onDepartmentChange={setSelectedDepartment}
+                />
+                <button className="toggle-emp-list" onClick={toggleEmployeeList}>
+                    {showEmployeesWithoutCV ? "Xem tất cả nhân viên" : "Xem nhân viên chưa có CV"}
+                </button>
+            </div>
+
+            <p>
+                {showEmployeesWithoutCV
+                    ? `Số nhân viên chưa có CV: ${filteredEmployees.length}`
+                    : `Tổng số nhân viên: ${filteredEmployees.length}`}
+            </p>
+            
+            <EmployeesList
+                employees={filteredEmployees}
+                title={showEmployeesWithoutCV ? "Danh sách nhân viên chưa có CV" : "Danh sách nhân viên"}
+                onRowClick={handleRowClick}
+                groupByDepartment={selectedDepartment === ""}
             />
 
-            <EmployeesList
+            {/* <EmployeesList
                 employees={filteredEmployees}
                 title="Danh sách nhân viên"
                 onRowClick={handleRowClick}
                 groupByDepartment={selectedDepartment === ""}
-            />
+            /> */}
 
             <Outlet />
         </div>

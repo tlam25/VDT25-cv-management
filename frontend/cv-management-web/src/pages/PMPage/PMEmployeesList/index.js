@@ -5,6 +5,8 @@ import EmployeesList from '../../../components/EmployeesList';
 import SearchBar from '../../../components/SearchBar';
 import FilterBar from '../../../components/FilterBar';
 
+import './PMEmployeesList.css';
+
 const API = "http://127.0.0.1:8000"
 
 const PMEmployeesList = () => {
@@ -17,7 +19,10 @@ const PMEmployeesList = () => {
 
     const [searchTerm, setSearchTerm] = useState('');
 
-    const filteredEmployees = employees.filter(emp => {
+    const [employeesWithoutCV, setEmployeesWithoutCV] = useState([]);
+    const [showEmployeesWithoutCV, setShowEmployeesWithoutCV] = useState(false);
+
+    const filteredEmployees = (showEmployeesWithoutCV ? employeesWithoutCV : employees).filter(emp => {
         const matchSearch =
             (emp.fullname || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
             (emp.first_name || "").toLowerCase().includes(searchTerm.toLowerCase()) ||
@@ -50,6 +55,26 @@ const PMEmployeesList = () => {
             }
         };
 
+        const fetchEmployeesWithoutCV = async () => {
+            try {
+                const response = await fetchWithAuth(`${API}/pm/employees_without_cv`, {
+                    method: 'GET',
+                    headers: {
+                        'Authorization': `Bearer ${localStorage.getItem('access_token')}`,
+                    },
+                });
+
+                if (!response.ok) {
+                    throw new Error('Không thể lấy danh sách nhân viên chưa có CV!');
+                }
+
+                const data = await response.json();
+                setEmployeesWithoutCV(data.employees_without_cv);
+            } catch (err) {
+                setError(err.message);
+            }
+        };
+
         const fetchProjects = async () => {
             try {
                 const response = await fetchWithAuth(`${API}/pm/projects`, {
@@ -65,12 +90,15 @@ const PMEmployeesList = () => {
             } catch {}
         };
 
-        fetchEmployees();
-        fetchProjects();
+        Promise.all([fetchEmployees(), fetchEmployeesWithoutCV(), fetchProjects()])
+            .finally(() => setLoading(false));
     }, []);
 
     const handleRowClick = (emp) => {
         navigate(`cv/${emp.emp_id}`, { state: { emp } });
+    };
+    const toggleEmployeeList = () => {
+        setShowEmployeesWithoutCV(!showEmployeesWithoutCV);
     };
 
     if (loading) {
@@ -82,17 +110,30 @@ const PMEmployeesList = () => {
 
     return (
         <div>
-            <SearchBar onSearch={setSearchTerm} />
-            <FilterBar
-                projects={projects}
-                selectedProject={selectedProject}
-                onProjectChange={setSelectedProject}
-            />
+            <div className="filter-container">
+                <SearchBar onSearch={setSearchTerm} />
+                <FilterBar
+                    projects={projects}
+                    selectedProject={selectedProject}
+                    onProjectChange={setSelectedProject}
+                />
+
+                <button className="toggle-emp-list" onClick={toggleEmployeeList}>
+                        {showEmployeesWithoutCV ? "Xem tất cả nhân viên" : "Xem nhân viên chưa có CV"}
+                </button>
+            </div>
+
+            <p>
+                {showEmployeesWithoutCV
+                    ? `Số nhân viên chưa có CV: ${filteredEmployees.length}`
+                    : `Tổng số nhân viên: ${filteredEmployees.length}`}
+            </p>
 
             <EmployeesList
                 employees={filteredEmployees}
-                title="Danh sách nhân viên"
+                title={showEmployeesWithoutCV ? "Danh sách nhân viên chưa có CV" : "Danh sách nhân viên"}
                 onRowClick={handleRowClick}
+                groupByProject={setSelectedProject === ""}
             />
 
             <Outlet />
