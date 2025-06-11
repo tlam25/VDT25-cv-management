@@ -1,0 +1,24 @@
+.filter-container {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+    flex-wrap: wrap;
+}
+
+.toggle-emp-list {
+    background: #e71039;
+    color: #fff;
+    font-weight: 600;
+    border: none;
+    border-radius: 12px;
+    padding: 8px 20px;
+    cursor: pointer;
+    transition: background 0.2s;
+    font-size: 16px;
+    white-space: nowrap;
+}
+
+.toggle-emp-list:hover {
+    background: #b70e2f;
+}
