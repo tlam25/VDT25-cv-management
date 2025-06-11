@@ -6,7 +6,7 @@ body {
     max-width: 1000px;
     margin: 0 auto;
     background: white;
-    padding: 100px;
+    padding: 20px;
 }
 
 .cv-meta {
@@ -276,7 +276,7 @@ body {
 
 .cv-course-fields {
     display: flex;
-    gap: 16px;
+    gap: 5px;
     flex-wrap: wrap;
     align-items: center;
 }
@@ -467,7 +467,7 @@ body {
     transition: border-color 0.18s;
 }
 .cv-summary textarea {
-    max-width: 980px;
+    max-width: 880px;
     min-height: 150px;
 }
 
