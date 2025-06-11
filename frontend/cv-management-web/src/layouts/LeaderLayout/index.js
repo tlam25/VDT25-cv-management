@@ -13,7 +13,6 @@ import './LeaderLayout.css';
 const API = "http://127.0.0.1:8000";
 
 const LeaderLayout = ({}) => {
-    const user = JSON.parse(localStorage.getItem('user'));
     useAuthGuard(['Leader']);
 
     const [unreadCount, setUnreadCount] = useState(0);
