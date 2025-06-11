@@ -63,7 +63,8 @@ const MenuBar = ({ role, unreadCount=0 }) => {
                     // ktra neu path hien tai co chua item.path
                     isActive =
                         location.pathname.endsWith(item.path) ||
-                        (item.path === 'employeeslist' && location.pathname.includes('employeeslist'));
+                        (item.path === 'employeeslist' && location.pathname.includes('employeeslist')) ||
+                        (item.path === 'me' && location.pathname.includes('me'));
                 } else {
                     isActive = location.pathname === '/';
                 }
@@ -89,7 +90,7 @@ const MenuBar = ({ role, unreadCount=0 }) => {
                 >
                     <div className="menu-icon" style={{position: 'relative'}}>
                         {item.icon}
-                        {item.isNotification && unreadCount > 0 && (
+                        {item.isNotification && unreadCount >= 0 && (
                             <span className="menu-badge">{unreadCount}</span>
                         )}
                     </div>
