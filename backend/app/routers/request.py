@@ -16,7 +16,7 @@ from pydantic import BaseModel
 router = APIRouter(prefix="/requests", tags=["requests"])
 
 class RequestCreate(BaseModel):
-    cv_id: int
+    cv_id: Optional[int] = None
     message: Optional[str] = None
 
 @router.post("/")
