@@ -21,6 +21,8 @@ VDT 2025 CV Management là một dự án thuộc Giai đoạn 1 của Chương 
 - Lọc xem theo từng bộ phận (Đối với Admin) và theo từng dự án (Đối với PM).
 - Admin, PM và BUL/Lead có thể gửi yêu/huỷ yêu cầu cập nhật CV tới nhân viên dưới cấp tương ứng của CV đang xem (Admin có thể gửi/huỷ yêu cầu dành cho PM và BUL/Lead).
 - Nhân viên dưới cấp nhận thông báo về yêu cầu cập nhật CV, có thể đánh dấu đã đọc/chưa đọc để tiện quản lý thông báo.
+- Xuất CV thành dạng PDF.
+- Lọc những nhân viên chưa có CV và thống kê số lượng để dễ kiểm soát.
 - Đảm bảo an toàn khi xác thực người dùng và quyền truy cập.
 - Giao diện thân thiện, dễ sử dụng.
 
